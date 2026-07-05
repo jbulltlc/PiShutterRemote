@@ -1,0 +1,29 @@
+# PiShutterRemote
+
+Reverse engineering and Home Assistant integration for PowerSmart RF roller blinds using a Raspberry Pi, CC1101 and RTL-SDR.
+
+## Status
+
+✅ RTL-SDR captures complete
+
+✅ Protocol decoded
+
+- Frequency: 433.425 MHz
+- Modulation: ASK / OOK
+- Encoding: Manchester II
+- Payload: 64-bit
+- Repeat period: ~10.7 ms
+
+Example packets
+
+UP
+
+fd82bca8aa7d4351
+
+STOP
+
+fd82bda8aa7d4251
+
+DOWN
+
+fd02bda8aafd4251

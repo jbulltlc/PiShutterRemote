@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+.venv/
+
+# VS Code
+.vscode/
+
+# macOS
+.DS_Store
+
+# SDR recordings
+captures/*.wav
+
+# pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/

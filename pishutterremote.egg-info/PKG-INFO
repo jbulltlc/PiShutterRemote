@@ -1,0 +1,7 @@
+Metadata-Version: 2.4
+Name: pishutterremote
+Version: 0.1.0
+Summary: PowerSmart RF reverse engineering
+Requires-Python: >=3.11
+Requires-Dist: spidev
+Requires-Dist: gpiozero
