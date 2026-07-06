@@ -1,11 +1,4 @@
 def encode_bits_from_hex(payload_hex: str) -> str:
-    """
-    Encode payload as PowerSmart/Manchester chips.
-
-    Mapping based on our successful captures:
-      data bit 1 -> 10
-      data bit 0 -> 01
-    """
     data = bytes.fromhex(payload_hex)
     chips = []
 
@@ -15,3 +8,14 @@ def encode_bits_from_hex(payload_hex: str) -> str:
             chips.append("10" if bit else "01")
 
     return "".join(chips)
+
+
+def encode_powersmart_raw_frame(payload_hex: str) -> str:
+    """
+    Generate the exact raw OOK frame observed from the PowerSmart remote.
+
+    Validated against captured UP/STOP/DOWN frames:
+      raw_frame = leading '1' + first 122 Manchester chips + trailer '101'
+    """
+    manchester = encode_bits_from_hex(payload_hex)
+    return "1" + manchester[:122] + "101"
