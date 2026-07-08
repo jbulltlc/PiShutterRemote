@@ -1,29 +1,12 @@
-# PiShutterRemote
+PiShutterRemote is a Python library for controlling PowerSmart 433.425 MHz roller shutters using a Raspberry Pi and CC1101 transceiver.
 
-Reverse engineering and Home Assistant integration for PowerSmart RF roller blinds using a Raspberry Pi, CC1101 and RTL-SDR.
+Status
 
-## Status
+✅ Reverse engineered protocol
+✅ CC1101 transmitter
+✅ Multiple shutters supported
+✅ Raspberry Pi library
+🚧 Home Assistant integration (in progress)
+🚧 Apple Home integration (planned)
 
-✅ RTL-SDR captures complete
-
-✅ Protocol decoded
-
-- Frequency: 433.425 MHz
-- Modulation: ASK / OOK
-- Encoding: Manchester II
-- Payload: 64-bit
-- Repeat period: ~10.7 ms
-
-Example packets
-
-UP
-
-fd82bca8aa7d4351
-
-STOP
-
-fd82bda8aa7d4251
-
-DOWN
-
-fd02bda8aafd4251
+The project was created after reverse engineering the proprietary PowerSmart RF protocol using an RTL-SDR, Universal Radio Hacker and a Flipper Zero implementation as reference. It aims to provide native integration with Home Assistant and Apple Home.
