@@ -1,70 +1,37 @@
 #!/usr/bin/env python3
 
 import argparse
-import time
 
+from pishutter.controller import PiShutterController
 from pishutter.protocols.powersmart import Command
 from pishutter.protocols.shutters import SHUTTERS
 
-CHIP_US = 225
-SAMPLE_RATE = 1_792_000
-GAP_SAMPLES = 19_150
-GAP_CHIPS = round((GAP_SAMPLES / SAMPLE_RATE * 1_000_000) / CHIP_US)
-
-REPEATS = 8
-FIFO_SIZE = 64
-
-from pishutter.cc1101.radio import CC1101Radio
-from pishutter.cc1101.transmitter import CC1101OOKTransmitter
-
-def pack_bits(bits: str) -> bytes:
-    padding = (-len(bits)) % 8
-    bits += "0" * padding
-
-    return bytes(
-        int(bits[index:index + 8], 2)
-        for index in range(0, len(bits), 8)
-    )
-
-
-def build_stream(remote, command: Command) -> bytes:
-    frame = remote.raw_frame_for(command)
-    gap = "0" * GAP_CHIPS
-
-    bits = "1"  # startup compensation chip from the working POC
-
-    for index in range(REPEATS):
-        bits += frame
-        if index != REPEATS - 1:
-            bits += gap
-
-    payload = remote.payload_for(command)
-
-    print(f"Shutter:     {remote.name}")
-    print(f"Command:     {command.value}")
-    print(f"Payload:     {payload}")
-    print(f"Frame chips: {len(frame)}")
-    print(f"Gap chips:   {GAP_CHIPS}")
-    print(f"Total chips: {len(bits)}")
-
-    return pack_bits(bits)
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Transmit a PowerSmart shutter command via CC1101."
+        description="Control a PowerSmart shutter via CC1101."
     )
 
-    parser.add_argument(
-        "shutter",
-        choices=sorted(SHUTTERS.keys()),
-        help="Shutter name",
-    )
+    parser.add_argument("shutter", choices=sorted(SHUTTERS.keys()))
 
-    parser.add_argument(
-        "command",
-        choices=[command.value for command in Command],
-        help="Command to transmit",
-    )
+    subcommands = parser.add_subparsers(dest="action", required=True)
+
+    for command in Command:
+        subcommands.add_parser(command.value)
+
+    position_parser = subcommands.add_parser("position")
+    position_parser.add_argument("value", type=int)
+
+    subcommands.add_parser("calibrate-closed")
+    subcommands.add_parser("calibrate-open")
+
+    configure_parser = subcommands.add_parser("configure")
+    configure_parser.add_argument("--open-time", type=float)
+    configure_parser.add_argument("--close-time", type=float)
+    configure_parser.add_argument("--buffer", type=float)
+    configure_parser.add_argument("--position", type=int)
+
+    subcommands.add_parser("status")
 
     return parser.parse_args()
 
@@ -72,27 +39,33 @@ def parse_args():
 def main() -> None:
     args = parse_args()
 
-    remote = SHUTTERS[args.shutter]
-    command = Command(args.command)
+    with PiShutterController() as controller:
+        blind = controller.get_blind(args.shutter)
 
-    radio = CC1101Radio()
+        if args.action in [command.value for command in Command]:
+            blind.send(Command(args.action))
 
-    try:
-        radio.open()
+        elif args.action == "position":
+            blind.set_position(args.value)
 
-        transmitter = CC1101OOKTransmitter(radio)
-        transmitter.configure()
+        elif args.action == "calibrate-closed":
+            blind.calibrate_closed()
 
-        data = build_stream(remote, command)
+        elif args.action == "calibrate-open":
+            blind.calibrate_open()
 
-        print(f"TX bytes:    {len(data)}")
+        elif args.action == "configure":
+            blind.configure(
+                open_time_seconds=args.open_time,
+                close_time_seconds=args.close_time,
+                safety_buffer_seconds=args.buffer,
+                position=args.position,
+            )
 
-        transmitter.transmit(data)
+        elif args.action == "status":
+            print(blind.state)
 
-        print("Done")
-
-    finally:
-        radio.close()
+    print(f"Done: {args.shutter} {args.action}")
 
 
 if __name__ == "__main__":
