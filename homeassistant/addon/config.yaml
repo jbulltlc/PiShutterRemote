@@ -1,0 +1,19 @@
+name: PiShutterRemote
+version: "0.1.0"
+slug: pishutterremote
+description: PowerSmart shutter controller using CC1101
+startup: services
+boot: auto
+init: false
+arch:
+  - aarch64
+  - armv7
+ports:
+  8080/tcp: 8080
+devices:
+  - /dev/spidev0.0
+  - /dev/spidev0.1
+map:
+  - config:rw
+options: {}
+schema: {}
