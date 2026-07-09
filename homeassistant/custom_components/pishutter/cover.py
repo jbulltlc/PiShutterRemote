@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/config/PiShutterRemote/src")
+
 import asyncio
 from functools import partial
 
@@ -9,7 +12,15 @@ from homeassistant.components.cover import (
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.entity import EntityCategory
 
+import inspect
+import pishutter.controller as pishutter_controller
+
 from pishutter.controller import PiShutterController
+
+raise RuntimeError(
+    f"PiShutterController loaded from: {inspect.getfile(PiShutterController)} "
+    f"with signature: {inspect.signature(PiShutterController.__init__)}"
+)
 from pishutter.protocols.shutters import SHUTTERS
 
 STATE_PATH = "/config/pishutter/state.json"
