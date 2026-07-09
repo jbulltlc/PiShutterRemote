@@ -6,7 +6,19 @@ from pishutter.modulation.stream import build_repeated_stream_bytes
 from pishutter.protocols.powersmart import Command, PowerSmartRemote
 from pishutter.protocols.shutters import SHUTTERS
 from pishutter.state import StateStore
+from pathlib import Path
 
+class PiShutterController:
+    def __init__(self, state_store: StateStore | None = None, state_path: str | None = None):
+        self.radio = CC1101Radio()
+        self.transmitter = CC1101OOKTransmitter(self.radio)
+
+        if state_store is not None:
+            self.state_store = state_store
+        elif state_path is not None:
+            self.state_store = StateStore(Path(state_path))
+        else:
+            self.state_store = StateStore()
 
 class PowerSmartBlind:
     def __init__(
