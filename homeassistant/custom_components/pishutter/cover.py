@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "/config/PiShutterRemote/src")
+
 import asyncio
 from functools import partial
 
@@ -8,6 +11,9 @@ from homeassistant.components.cover import (
 )
 from homeassistant.const import CONF_NAME
 from homeassistant.helpers.entity import EntityCategory
+
+import inspect
+import pishutter.controller as pishutter_controller
 
 from pishutter.controller import PiShutterController
 from pishutter.protocols.shutters import SHUTTERS
