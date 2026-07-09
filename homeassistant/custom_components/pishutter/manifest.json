@@ -1,0 +1,14 @@
+{
+    "domain": "pishutter",
+    "name": "PiShutterRemote",
+    "version": "0.1.0",
+    "documentation": "https://github.com/jbulltlc/PiShutterRemote",
+    "requirements": [
+        "spidev"
+    ],
+    "dependencies": [],
+    "codeowners": [
+        "@jbulltlc"
+    ],
+    "iot_class": "local_push"
+}
