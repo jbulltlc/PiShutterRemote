@@ -29,7 +29,7 @@ SHUTTERS = {
         name="Studio",
         up="fda0bca8aa5f4351",
         stop="fda0bda8aa5f4251",
-        down="fda0bca8aa5f4354",
+        down="fd20bda8aadf4251",
     ),
     "main-lounge": PowerSmartRemote(
         name="Main Lounge",

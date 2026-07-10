@@ -10,6 +10,14 @@ def create_controller() -> PiShutterController:
         state_path=STATE_PATH,
     )
 
+from pydantic import BaseModel
+
+class BlindConfiguration(BaseModel):
+    open_time_seconds: float | None = None
+    close_time_seconds: float | None = None
+    safety_buffer_seconds: float | None = None
+    position: int | None = None
+
 STATE_PATH = "/config/pishutter/state.json"
 
 app = FastAPI(title="PiShutterRemote")
@@ -91,6 +99,30 @@ def calibrate_open(blind_key: str):
     except ValueError as ex:
         raise HTTPException(status_code=404, detail=str(ex))
 
+@app.post("/blinds/{blind_key}/configure")
+def configure_blind(
+    blind_key: str,
+    configuration: BlindConfiguration,
+):
+    try:
+        with create_controller() as controller:
+            blind = controller.get_blind(blind_key)
+
+            blind.configure(
+                open_time_seconds=configuration.open_time_seconds,
+                close_time_seconds=configuration.close_time_seconds,
+                safety_buffer_seconds=configuration.safety_buffer_seconds,
+                position=configuration.position,
+            )
+
+            return {
+                "ok": True,
+                "blind": blind_key,
+                "state": blind.state,
+            }
+
+    except ValueError as ex:
+        raise HTTPException(status_code=404, detail=str(ex))
 
 def _send(blind_key: str, command: str):
     try:
