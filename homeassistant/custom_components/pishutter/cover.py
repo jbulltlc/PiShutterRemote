@@ -16,6 +16,11 @@ import inspect
 import pishutter.controller as pishutter_controller
 
 from pishutter.controller import PiShutterController
+
+raise RuntimeError(
+    f"PiShutterController loaded from: {inspect.getfile(PiShutterController)} "
+    f"with signature: {inspect.signature(PiShutterController.__init__)}"
+)
 from pishutter.protocols.shutters import SHUTTERS
 
 STATE_PATH = "/config/pishutter/state.json"
