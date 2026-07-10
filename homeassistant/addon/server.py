@@ -1,7 +1,14 @@
 from fastapi import FastAPI, HTTPException
 
+from pishutter.cc1101.driver import CC1101ShutterTransmitter
 from pishutter.controller import PiShutterController
 from pishutter.protocols.shutters import SHUTTERS
+
+def create_controller() -> PiShutterController:
+    return PiShutterController(
+        transmitter=CC1101ShutterTransmitter(),
+        state_path=STATE_PATH,
+    )
 
 STATE_PATH = "/config/pishutter/state.json"
 
@@ -26,7 +33,7 @@ def list_blinds():
 @app.get("/blinds/{blind_key}")
 def get_blind(blind_key: str):
     try:
-        with PiShutterController(state_path=STATE_PATH) as controller:
+        with create_controller() as controller:
             blind = controller.get_blind(blind_key)
             return {
                 "key": blind.key,
@@ -55,7 +62,7 @@ def blind_stop(blind_key: str):
 @app.post("/blinds/{blind_key}/position/{position}")
 def blind_position(blind_key: str, position: int):
     try:
-        with PiShutterController(state_path=STATE_PATH) as controller:
+        with create_controller() as controller:
             blind = controller.get_blind(blind_key)
             blind.set_position(position)
             return {"ok": True, "blind": blind_key, "position": blind.position}
@@ -66,7 +73,7 @@ def blind_position(blind_key: str, position: int):
 @app.post("/blinds/{blind_key}/calibrate/closed")
 def calibrate_closed(blind_key: str):
     try:
-        with PiShutterController(state_path=STATE_PATH) as controller:
+        with create_controller() as controller:
             blind = controller.get_blind(blind_key)
             blind.calibrate_closed()
             return {"ok": True, "blind": blind_key, "position": blind.position}
@@ -77,7 +84,7 @@ def calibrate_closed(blind_key: str):
 @app.post("/blinds/{blind_key}/calibrate/open")
 def calibrate_open(blind_key: str):
     try:
-        with PiShutterController(state_path=STATE_PATH) as controller:
+        with create_controller() as controller:
             blind = controller.get_blind(blind_key)
             blind.calibrate_open()
             return {"ok": True, "blind": blind_key, "position": blind.position}
@@ -87,7 +94,7 @@ def calibrate_open(blind_key: str):
 
 def _send(blind_key: str, command: str):
     try:
-        with PiShutterController(state_path=STATE_PATH) as controller:
+        with create_controller() as controller:
             blind = controller.get_blind(blind_key)
             blind.send(command)
             return {"ok": True, "blind": blind_key, "command": command}

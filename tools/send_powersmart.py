@@ -2,9 +2,12 @@
 
 import argparse
 
+
+from pishutter.cc1101.driver import CC1101ShutterTransmitter
 from pishutter.controller import PiShutterController
-from pishutter.protocols.powersmart import Command
-from pishutter.protocols.shutters import SHUTTERS
+
+# from pishutter.protocols.powersmart import Command
+# from pishutter.protocols.shutters import SHUTTERS
 
 
 def parse_args():
@@ -38,8 +41,9 @@ def parse_args():
 
 def main() -> None:
     args = parse_args()
+    transmitter = CC1101ShutterTransmitter()
 
-    with PiShutterController() as controller:
+    with PiShutterController(transmitter=transmitter) as controller:
         blind = controller.get_blind(args.shutter)
 
         if args.action in [command.value for command in Command]:

@@ -1,17 +1,19 @@
 import time
+from pathlib import Path
 
-from pishutter.cc1101.radio import CC1101Radio
-from pishutter.cc1101.transmitter import CC1101OOKTransmitter
-from pishutter.modulation.stream import build_repeated_stream_bytes
 from pishutter.protocols.powersmart import Command, PowerSmartRemote
 from pishutter.protocols.shutters import SHUTTERS
 from pishutter.state import StateStore
-from pathlib import Path
+from pishutter.transmitter import ShutterTransmitter
 
 class PiShutterController:
-    def __init__(self, state_store: StateStore | None = None, state_path: str | None = None):
-        self.radio = CC1101Radio()
-        self.transmitter = CC1101OOKTransmitter(self.radio)
+    def __init__(
+        self,
+        transmitter: ShutterTransmitter,
+        state_store: StateStore | None = None,
+        state_path: str | Path | None = None,
+    ) -> None:
+        self.transmitter = transmitter
 
         if state_store is not None:
             self.state_store = state_store
@@ -19,6 +21,47 @@ class PiShutterController:
             self.state_store = StateStore(Path(state_path))
         else:
             self.state_store = StateStore()
+
+        self.blinds = {
+            key: PowerSmartBlind(key, remote, self)
+            for key, remote in SHUTTERS.items()
+        }
+
+    def __enter__(self) -> "PiShutterController":
+        self.transmitter.open()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.transmitter.close()
+
+    def get_blind(self, key: str) -> PowerSmartBlind:
+        try:
+            return self.blinds[key]
+        except KeyError as exc:
+            raise ValueError(f"Unknown blind: {key}") from exc
+
+    def send(
+        self,
+        shutter_key: str,
+        command: Command | str,
+    ) -> None:
+        if isinstance(command, str):
+            command = Command(command)
+
+        blind = self.get_blind(shutter_key)
+        self.transmitter.send(blind.remote, command)
+
+    def up(self, shutter_key: str) -> None:
+        self.get_blind(shutter_key).up()
+
+    def stop(self, shutter_key: str) -> None:
+        self.get_blind(shutter_key).stop()
+
+    def down(self, shutter_key: str) -> None:
+        self.get_blind(shutter_key).down()
+
+    def set_position(self, shutter_key: str, position: int) -> None:
+        self.get_blind(shutter_key).set_position(position)
 
 class PowerSmartBlind:
     def __init__(
