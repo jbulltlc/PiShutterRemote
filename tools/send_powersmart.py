@@ -2,13 +2,11 @@
 
 import argparse
 
+from pishutter.protocols.powersmart import Command
+from pishutter.protocols.shutters import SHUTTERS
 
 from pishutter.cc1101.driver import CC1101ShutterTransmitter
 from pishutter.controller import PiShutterController
-
-# from pishutter.protocols.powersmart import Command
-# from pishutter.protocols.shutters import SHUTTERS
-
 
 def parse_args():
     parser = argparse.ArgumentParser(

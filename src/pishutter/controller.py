@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 from pathlib import Path
 
@@ -168,50 +170,3 @@ class PowerSmartBlind:
             + self.state["safety_buffer_seconds"]
         )
         self.controller.state_store.update_blind_state(self.key, position=100)
-
-
-class PiShutterController:
-    def __init__(self, state_store: StateStore | None = None):
-        self.radio = CC1101Radio()
-        self.transmitter = CC1101OOKTransmitter(self.radio)
-        self.state_store = state_store or StateStore()
-
-        self.blinds = {
-            key: PowerSmartBlind(key, remote, self)
-            for key, remote in SHUTTERS.items()
-        }
-
-    def __enter__(self):
-        self.radio.open()
-        self.transmitter.configure()
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.radio.close()
-
-    def get_blind(self, key: str) -> PowerSmartBlind:
-        if key not in self.blinds:
-            raise ValueError(f"Unknown blind: {key}")
-        return self.blinds[key]
-
-    def send(self, shutter_key: str, command: Command | str) -> None:
-        if isinstance(command, str):
-            command = Command(command)
-
-        blind = self.get_blind(shutter_key)
-        frame = blind.remote.raw_frame_for(command)
-        data = build_repeated_stream_bytes(frame)
-
-        self.transmitter.transmit(data)
-
-    def up(self, shutter_key: str) -> None:
-        self.get_blind(shutter_key).up()
-
-    def stop(self, shutter_key: str) -> None:
-        self.get_blind(shutter_key).stop()
-
-    def down(self, shutter_key: str) -> None:
-        self.get_blind(shutter_key).down()
-
-    def set_position(self, shutter_key: str, position: int) -> None:
-        self.get_blind(shutter_key).set_position(position)
