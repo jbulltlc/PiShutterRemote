@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import threading
+
 from pishutter.cc1101.radio import CC1101Radio
 from pishutter.cc1101.transmitter import CC1101OOKTransmitter
 from pishutter.modulation.stream import build_repeated_stream_bytes
@@ -19,29 +23,36 @@ class CC1101ShutterTransmitter:
         self._transmitter = CC1101OOKTransmitter(self._radio)
         self._is_open = False
 
-    def open(self) -> None:
-        if self._is_open:
-            return
+        # Only one thread may access the CC1101 at a time.
+        self._lock = threading.Lock()
 
-        self._radio.open()
-        self._transmitter.configure()
-        self._is_open = True
+    def open(self) -> None:
+        with self._lock:
+            if self._is_open:
+                return
+
+            self._radio.open()
+            self._transmitter.configure()
+            self._is_open = True
 
     def close(self) -> None:
-        if not self._is_open:
-            return
+        with self._lock:
+            if not self._is_open:
+                return
 
-        self._radio.close()
-        self._is_open = False
+            self._radio.close()
+            self._is_open = False
 
     def send(
         self,
         remote: PowerSmartRemote,
         command: Command,
     ) -> None:
-        if not self._is_open:
-            raise RuntimeError("Transmitter is not open")
-
         frame = remote.raw_frame_for(command)
         data = build_repeated_stream_bytes(frame)
-        self._transmitter.transmit(data)
+
+        with self._lock:
+            if not self._is_open:
+                raise RuntimeError("Transmitter is not open")
+
+            self._transmitter.transmit(data)

@@ -1,26 +1,50 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+import threading
+
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from pishutter.cc1101.driver import CC1101ShutterTransmitter
 from pishutter.controller import PiShutterController
 from pishutter.protocols.shutters import SHUTTERS
 
-def create_controller() -> PiShutterController:
-    return PiShutterController(
-        transmitter=CC1101ShutterTransmitter(),
-        state_path=STATE_PATH,
-    )
 
-from pydantic import BaseModel
+STATE_PATH = "/config/pishutter/state.json"
+
+transmitter = CC1101ShutterTransmitter()
+
+controller = PiShutterController(
+    transmitter=transmitter,
+    state_path=STATE_PATH,
+)
+
+# Protect the shared state store and blind movement calculations.
+controller_lock = threading.RLock()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    transmitter.open()
+
+    try:
+        yield
+    finally:
+        transmitter.close()
+
+
+app = FastAPI(
+    title="PiShutterRemote",
+    lifespan=lifespan,
+)
+
 
 class BlindConfiguration(BaseModel):
     open_time_seconds: float | None = None
     close_time_seconds: float | None = None
     safety_buffer_seconds: float | None = None
     position: int | None = None
-
-STATE_PATH = "/config/pishutter/state.json"
-
-app = FastAPI(title="PiShutterRemote")
 
 
 @app.get("/health")
@@ -41,7 +65,7 @@ def list_blinds():
 @app.get("/blinds/{blind_key}")
 def get_blind(blind_key: str):
     try:
-        with create_controller() as controller:
+        with controller_lock:
             blind = controller.get_blind(blind_key)
             return {
                 "key": blind.key,
@@ -70,34 +94,49 @@ def blind_stop(blind_key: str):
 @app.post("/blinds/{blind_key}/position/{position}")
 def blind_position(blind_key: str, position: int):
     try:
-        with create_controller() as controller:
-            blind = controller.get_blind(blind_key)
-            blind.set_position(position)
-            return {"ok": True, "blind": blind_key, "position": blind.position}
+        blind = controller.get_blind(blind_key)
+        blind.set_position(position)
+
+        return {
+            "ok": True,
+            "blind": blind_key,
+            "position": blind.position,
+        }
+
     except ValueError as ex:
-        raise HTTPException(status_code=404, detail=str(ex))
+        raise HTTPException(status_code=404, detail=str(ex)) from ex
 
 
 @app.post("/blinds/{blind_key}/calibrate/closed")
 def calibrate_closed(blind_key: str):
     try:
-        with create_controller() as controller:
-            blind = controller.get_blind(blind_key)
-            blind.calibrate_closed()
-            return {"ok": True, "blind": blind_key, "position": blind.position}
+        blind = controller.get_blind(blind_key)
+        blind.calibrate_closed()
+
+        return {
+            "ok": True,
+            "blind": blind_key,
+            "position": blind.position,
+        }
+
     except ValueError as ex:
-        raise HTTPException(status_code=404, detail=str(ex))
+        raise HTTPException(status_code=404, detail=str(ex)) from ex
 
 
 @app.post("/blinds/{blind_key}/calibrate/open")
 def calibrate_open(blind_key: str):
     try:
-        with create_controller() as controller:
-            blind = controller.get_blind(blind_key)
-            blind.calibrate_open()
-            return {"ok": True, "blind": blind_key, "position": blind.position}
+        blind = controller.get_blind(blind_key)
+        blind.calibrate_open()
+
+        return {
+            "ok": True,
+            "blind": blind_key,
+            "position": blind.position,
+        }
+
     except ValueError as ex:
-        raise HTTPException(status_code=404, detail=str(ex))
+        raise HTTPException(status_code=404, detail=str(ex)) from ex
 
 @app.post("/blinds/{blind_key}/configure")
 def configure_blind(
@@ -105,7 +144,7 @@ def configure_blind(
     configuration: BlindConfiguration,
 ):
     try:
-        with create_controller() as controller:
+        with controller_lock:
             blind = controller.get_blind(blind_key)
 
             blind.configure(
@@ -118,17 +157,23 @@ def configure_blind(
             return {
                 "ok": True,
                 "blind": blind_key,
-                "state": blind.state,
+                "state": dict(blind.state),
             }
 
     except ValueError as ex:
-        raise HTTPException(status_code=404, detail=str(ex))
+        raise HTTPException(status_code=404, detail=str(ex)) from ex
 
 def _send(blind_key: str, command: str):
     try:
-        with create_controller() as controller:
-            blind = controller.get_blind(blind_key)
-            blind.send(command)
-            return {"ok": True, "blind": blind_key, "command": command}
+        # Do not hold controller_lock for the entire shutter travel time.
+        blind = controller.get_blind(blind_key)
+        blind.send(command)
+
+        return {
+            "ok": True,
+            "blind": blind_key,
+            "command": command,
+        }
+
     except ValueError as ex:
-        raise HTTPException(status_code=404, detail=str(ex))
+        raise HTTPException(status_code=404, detail=str(ex)) from ex
